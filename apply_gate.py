@@ -6,12 +6,13 @@
    本当に鍵をかけるならサーバー側で認証する（Vercelのミドルウェア等）。
 
 一箇所（_gate.html）を直せば全ページに効く。何度実行しても増えない。
-使い方: python3 apply_gate.py
+使い方: python3 apply_gate.py [--remove]
 """
 import io, glob, sys
 
 MARK = 'fnt-ws-gate'
 gate = io.open('_gate.html', encoding='utf-8').read().strip()
+REMOVE = '--remove' in sys.argv
 
 files = sorted(glob.glob('index.html') + glob.glob('*/index.html'))
 if not files:
@@ -20,6 +21,14 @@ if not files:
 added = skipped = 0
 for f in files:
     s = io.open(f, encoding='utf-8').read()
+    if REMOVE:
+        if MARK not in s:
+            print(f"  {f:34} もともと無い"); skipped += 1; continue
+        s = s.replace('</title>\n' + gate, '</title>', 1)
+        if MARK in s:
+            print(f"  🔴 {f}: 外せなかった（中身が変わっている）"); sys.exit(1)
+        io.open(f, 'w', encoding='utf-8').write(s)
+        print(f"  {f:34} 外した"); added += 1; continue
     if MARK in s:
         print(f"  {f:34} すでに入っている"); skipped += 1; continue
     if '</title>' not in s:
@@ -28,11 +37,11 @@ for f in files:
     io.open(f, 'w', encoding='utf-8').write(s)
     print(f"  {f:34} 入れた"); added += 1
 
-# 🔴 検算：全ページに1回だけ入っていること
-ng = []
-for f in files:
-    n = io.open(f, encoding='utf-8').read().count(MARK)
-    if n != 1: ng.append((f, n))
+# 🔴 検算：入れたなら1回だけ／外したなら0回
+want = 0 if REMOVE else 1
+ng = [(f, n) for f in files
+      for n in [io.open(f, encoding='utf-8').read().count(MARK)] if n != want]
 if ng:
     print('🔴 回数がおかしい:', ng); sys.exit(1)
-print(f"\n✅ {len(files)}ページすべてに1回だけ入っている（新規{added} / 既存{skipped}）")
+verb = '外れている' if REMOVE else '1回だけ入っている'
+print(f"\n✅ {len(files)}ページすべてで{verb}（処理{added} / 対象外{skipped}）")
