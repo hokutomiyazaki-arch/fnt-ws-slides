@@ -1,0 +1,17 @@
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+*.swp
+*~
+.vscode/
+node_modules/
+
+# 🔴 このリポジトリは public。秘密・顧客情報・台本は絶対に置かない
+.env
+.env.*
+*.pem
+settings.local.json
+# 台本つきのレビュー卓は宮崎さん専用。ここには置かない
+*レビュー卓*
+*review*
