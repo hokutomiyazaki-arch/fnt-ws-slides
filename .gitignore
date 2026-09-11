@@ -15,3 +15,7 @@ settings.local.json
 # 台本つきのレビュー卓は宮崎さん専用。ここには置かない
 *レビュー卓*
 *review*
+
+# Driveから落とした元PDF（278MB）。生成物はコミットするが元は載せない
+入力/
+_made.json
