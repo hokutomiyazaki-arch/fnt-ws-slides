@@ -2,13 +2,19 @@
  *
  * 🔴 これは鍵ではない。速度バンプ（面倒にするだけ）。
  *    URLを一度でも知った人は、履歴・ブックマーク・共有シートから開ける。
- *    本当に締め出すなら URL を変えるしかない（README の「効かないこと」を読む）。
+ *    本当に締め出すのは年1回のアドレス付け替え（shared/rotate_url.py）。
  *
  * やること
  *   1. Android/Chrome の「ホーム画面に追加」バナーを出さない
  *   2. 長押しメニュー・テキスト選択・ドラッグを止める（URLとリンクを取りにくくする）
- *   3. 最初のタップで全画面にする（アドレスバーが隠れる＝URLが見えなくなる）
- *   4. 全画面を抜けたら、次のタップでまた全画面にする
+ *   3. 右下に「全画面」ボタンを出す ← v2 で追加
+ *   4. 最初のタップでも全画面を試す（黙って失敗しても①のボタンが残る）
+ *
+ * 🔴 v2（2026-09-19）で見えるボタンを足した理由
+ *    v1 は「最初のタップで全画面」だけだった。全画面は端末やブラウザの設定で
+ *    断られることがあり、断られても画面に何も出ないので、
+ *    使う側も直す側も「効いていない」としか分からなかった。
+ *    ボタンなら、押して変わらなければ「この端末では無理」と切り分けられる。
  *
  * 置き方：ページの <head> に
  *   <script src="kiosk.js" defer></script>        （階層が下なら ../kiosk.js）
@@ -25,7 +31,6 @@
   });
 
   // ── 2. 長押し・選択・ドラッグを止める ────────────────────
-  // 入力欄の中だけは普通に使えるようにする（検索窓を壊さないため）
   function inField(t) {
     return t && t.closest && t.closest('input, textarea, [contenteditable]');
   }
@@ -40,36 +45,80 @@
     'html{-webkit-touch-callout:none}' +
     'body{-webkit-user-select:none;user-select:none}' +
     'input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}' +
-    'img,a{-webkit-user-drag:none}';
+    'img,a{-webkit-user-drag:none}' +
+    '#kioskFs{position:fixed;z-index:2147483647;' +
+      'right:calc(12px + env(safe-area-inset-right,0px));' +
+      'bottom:calc(12px + env(safe-area-inset-bottom,0px));' +
+      'width:44px;height:44px;border-radius:50%;border:1px solid rgba(0,0,0,.18);' +
+      'background:rgba(255,255,255,.88);color:#333;font-size:17px;line-height:1;' +
+      'display:grid;place-items:center;cursor:pointer;padding:0;' +
+      '-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);' +
+      'box-shadow:0 1px 6px rgba(0,0,0,.18)}' +
+    '#kioskFs:active{transform:scale(.94)}' +
+    '@media print{#kioskFs{display:none}}';
   (document.head || root).appendChild(css);
 
-  // ── 3. 最初のタップで全画面 ──────────────────────────────
-  // 全画面化はユーザー操作の中でしか呼べない（ブラウザの決まり）ので、
-  // 読み込み直後ではなく「最初に触ったとき」に入れる。
+  // ── 3/4. 全画面 ──────────────────────────────────────────
   var req = root.requestFullscreen || root.webkitRequestFullscreen ||
             root.mozRequestFullScreen || root.msRequestFullscreen;
+  var exit = document.exitFullscreen || document.webkitExitFullscreen ||
+             document.mozCancelFullScreen || document.msExitFullscreen;
 
   function isFull() {
-    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+    return !!(document.fullscreenElement || document.webkitFullscreenElement ||
+              document.mozFullScreenElement || document.msFullscreenElement);
   }
 
   function enter() {
     if (!req || isFull()) return;
     try {
       var p = req.call(root, { navigationUI: 'hide' });
-      if (p && p.catch) p.catch(function () {});   // 断られても何もしない
-    } catch (e) { /* 対応していない端末はここに来る。放っておく */ }
+      if (p && p.catch) p.catch(function () {});   // 断られても黙って戻る
+    } catch (e) { /* 対応していない端末 */ }
   }
 
-  // 4. 抜けたらまた入れるよう、毎回のタップで試す（既に全画面なら何もしない）
-  ['pointerdown', 'touchend', 'click'].forEach(function (type) {
-    document.addEventListener(type, enter, { capture: true, passive: true });
+  // この端末で全画面が使えないなら、ボタンは出さない（押しても何も起きないボタンは邪魔）
+  if (!req || document.fullscreenEnabled === false) return;
+
+  var btn = document.createElement('button');
+  btn.id = 'kioskFs';
+  btn.type = 'button';
+  btn.setAttribute('aria-label', '全画面');
+  btn.textContent = '⛶';
+
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (isFull()) {
+      if (exit) exit.call(document);
+    } else {
+      enter();
+    }
   });
 
-  // 全画面に対応していない端末（iPhoneのSafariなど）でも、
-  // 少しでもアドレスバーを縮めるため、読み込み後にわずかにスクロールする。
-  window.addEventListener('load', function () {
-    if (req) return;
-    setTimeout(function () { window.scrollTo(0, 1); }, 120);
+  function sync() {
+    var full = isFull();
+    btn.textContent = full ? '✕' : '⛶';
+    btn.setAttribute('aria-label', full ? '全画面をやめる' : '全画面');
+  }
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (t) {
+    document.addEventListener(t, sync);
+  });
+
+  function mount() {
+    (document.body || root).appendChild(btn);
+    sync();
+  }
+  if (document.body) mount();
+  else document.addEventListener('DOMContentLoaded', mount);
+
+  // 最初のタップでも試す（ボタンを押さなくても全画面になる端末のため）
+  var once = function (e) {
+    if (e.target !== btn) enter();
+    document.removeEventListener('pointerdown', once, true);
+    document.removeEventListener('touchend', once, true);
+    document.removeEventListener('click', once, true);
+  };
+  ['pointerdown', 'touchend', 'click'].forEach(function (t) {
+    document.addEventListener(t, once, { capture: true, passive: true });
   });
 })();
