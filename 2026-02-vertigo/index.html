@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>めまい患者に対する介入 ／ 受講者用</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -61,6 +66,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
 .tocit[aria-current="true"]{border-color:var(--violet);background:var(--chip)}
 </style>
 
+<script src="../kiosk.js" defer></script>
+</head>
+<body>
 <header class="top">
   <div class="brand">めまい患者に対する介入<small>FNTニューロコミュニティ ／ 2026年2月</small></div>
   <button class="tbtn" id="btnToc">目次</button>
@@ -126,3 +134,6 @@ $('btnToc').onclick=()=>{
 let start=0; try{const v=+localStorage.getItem(KEY); if(v>=0&&v<N) start=v;}catch(e){}
 go(start);
 </script>
+
+</body>
+</html>
