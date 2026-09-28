@@ -19,3 +19,6 @@ settings.local.json
 # Driveから落とした元PDF（278MB）。生成物はコミットするが元は載せない
 入力/
 _made.json
+
+# Pythonの作業ファイル
+__pycache__/
