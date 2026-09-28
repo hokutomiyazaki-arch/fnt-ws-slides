@@ -72,13 +72,21 @@ def add_button(d, slug):
     """ページ上部のボタン列の最後に「PDF」を足す。download 属性でその場で保存される。"""
     p = d / "index.html"
     html = p.read_text(encoding="utf-8")
-    if BTN_MARK in html:
-        return
-    i = html.index('<header class="top">')
-    j = html.index("</header>", i)
-    btn = f'  <a class="tbtn" {BTN_MARK} href="{slug}.pdf" download style="text-decoration:none">PDF</a>\n'
-    html = html[:j] + btn + html[j:]
+    if BTN_MARK not in html:
+        i = html.index('<header class="top">')
+        j = html.index("</header>", i)
+        btn = f'  <a class="tbtn" {BTN_MARK} href="{slug}.pdf" download style="text-decoration:none">PDF</a>\n'
+        html = html[:j] + btn + html[j:]
+    # スマホ幅でボタンが右へ押し出されないよう、タイトルのほうを縮める（2026-09-28 睡眠の回で切れていた）
+    if STYLE_MARK not in html:
+        css = (f'<style id="{STYLE_MARK}">.top .brand{{min-width:0;flex:1 1 auto;overflow:hidden}}'
+               '.top .brand,.top .brand small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}'
+               '.top .tbtn{flex-shrink:0}</style>\n')
+        html = html.replace("</head>", css + "</head>", 1)
     p.write_text(html, encoding="utf-8")
+
+
+STYLE_MARK = "pdfBtnFit"
 
 
 if __name__ == "__main__":
